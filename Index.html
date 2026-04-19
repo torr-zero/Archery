@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archery Master PRO+</title>
+
+<style>
+body{margin:0;background:#020617;color:#fff;font-family:sans-serif;overflow:hidden}
+canvas{display:block}
+
+#ui{
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);
+  display:flex;gap:15px;font-size:14px
+}
+
+#shop{
+  position:fixed;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  background:rgba(0,0,0,0.7);
+  padding:10px;
+  border-radius:10px;
+}
+
+button{
+  margin-top:5px;
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  Score: <span id="score">0</span>
+  Coins: <span id="coins">0</span>
+</div>
+
+<div id="shop">
+  <b>Bow Skins</b><br>
+
+  Default ✔️
+
+  <br><br>
+  Neon (100)
+  <button onclick="buySkin('neon',100)">Buy</button>
+
+  <br><br>
+  Gold (200)
+  <button onclick="buySkin('gold',200)">Buy</button>
+
+  <br><br>
+  <button onclick="setSkin('default')">Use Default</button>
+  <button onclick="setSkin('neon')">Use Neon</button>
+  <button onclick="setSkin('gold')">Use Gold</button>
+</div>
+
+<script>
+const c=document.getElementById("c");
+const ctx=c.getContext("2d");
+
+function resize(){c.width=innerWidth;c.height=innerHeight;}
+resize(); onresize=resize;
+
+// SAVE SYSTEM
+let coins = Number(localStorage.getItem("coins")) || 0;
+let owned = JSON.parse(localStorage.getItem("skins")) || {default:true};
+let currentSkin = localStorage.getItem("skin") || "default";
+
+document.getElementById("coins").textContent = coins;
+
+// GAME
+let arrow=null, aiming=false, start=null, cur=null;
+let wind=0;
+
+function pos(e){ if(e.touches) e=e.touches[0]; return {x:e.clientX,y:e.clientY}; }
+
+c.onmousedown=e=>{aiming=true;start=pos(e);};
+c.onmousemove=e=>{if(aiming)cur=pos(e);};
+c.onmouseup=shoot;
+
+function shoot(){
+  if(!aiming) return;
+  aiming=false;
+
+  let dx=start.x-cur.x;
+  let dy=start.y-cur.y;
+
+  arrow={x:start.x,y:start.y,vx:dx*0.15,vy:dy*0.15};
+  wind=(Math.random()-0.5)*0.2;
+
+  coins += 5; // reward tiap tembakan
+  save();
+}
+
+// SKIN SYSTEM
+function buySkin(name,price){
+  if(coins>=price){
+    coins-=price;
+    owned[name]=true;
+    save();
+    alert("Unlocked "+name);
+  }
+}
+
+function setSkin(name){
+  if(owned[name]){
+    currentSkin=name;
+    save();
+  }
+}
+
+function save(){
+  localStorage.setItem("coins",coins);
+  localStorage.setItem("skins",JSON.stringify(owned));
+  localStorage.setItem("skin",currentSkin);
+  document.getElementById("coins").textContent = coins;
+}
+
+// DRAW
+function drawBow(x,y){
+  ctx.lineWidth=3;
+
+  if(currentSkin==="default"){
+    ctx.strokeStyle="#fff";
+  }
+  if(currentSkin==="neon"){
+    ctx.strokeStyle="#0ff";
+    ctx.shadowBlur=15;
+    ctx.shadowColor="#0ff";
+  }
+  if(currentSkin==="gold"){
+    ctx.strokeStyle="#facc15";
+    ctx.shadowBlur=10;
+    ctx.shadowColor="#facc15";
+  }
+
+  ctx.beginPath();
+  ctx.arc(x,y,40,Math.PI/2,Math.PI*1.5);
+  ctx.stroke();
+
+  ctx.shadowBlur=0;
+}
+
+// LOOP
+function loop(){
+  ctx.clearRect(0,0,c.width,c.height);
+
+  // bow
+  drawBow(150,c.height/2);
+
+  // arrow
+  if(arrow){
+    arrow.vy+=0.2;
+    arrow.vx+=wind;
+
+    arrow.x+=arrow.vx;
+    arrow.y+=arrow.vy;
+
+    ctx.fillStyle="#fff";
+    ctx.fillRect(arrow.x,arrow.y,10,2);
+  }
+
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
